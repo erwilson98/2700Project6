@@ -1,0 +1,128 @@
+ rem Spider version 2
+init
+ rem colors
+ COLUPF = 2
+ COLUBK = 8
+ COLUP1 = 15
+ rem playfield
+ playfield:
+  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  X..............................X
+  X..............................X
+  X..............................X
+  X..............................X
+  X..............................X
+  X..............................X
+  X..............................X
+  X..............................X
+  X..............................X
+  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+end
+ rem draw the spider
+ player0:
+ %10100101
+ %10100101
+ %01011010
+ %00111100
+ %00100100
+ %01011010
+ %11000011
+end
+ rem draw the human
+ player1:
+ %01100110
+ %00100100
+ %00011000
+ %00011000
+ %01111110
+ %01001010
+ %10011010
+end
+ rem give a starting position to spider
+ x = 30 : y = 18
+ rem starting pos for the person
+ a = 58: b = 58
+
+ rem initialize score
+ score = 0
+
+
+mainloop
+ rem update the spider's color
+ COLUP0 = 1
+ rem person color
+ COLUP1 = 15
+
+ rem update the spider's position
+ player0x = x : player0y = y
+ rem update person
+ player1x = a : player1y = b
+
+ rem draw the game before we branch off into loops
+ drawscreen
+ rem lets get chunky
+ drawscreen
+ drawscreen
+
+ rem handle spider  movement (he's in the right spot by the time we get to drawscreen)
+ if joy0left then gosub left0
+ if joy0right then gosub right0
+ if joy0up then gosub up0
+ if joy0down then gosub down0
+
+ rem handle person movement
+ if joy1left then gosub left1
+ if joy1right then gosub right1
+ if joy1up then gosub up1
+ if joy1down then gosub down1
+
+ goto mainloop
+
+left0
+ x = x - 1
+ player0x = x
+ if collision(player0, playfield) then x = x + 3
+ return
+
+left1
+ a = a - 2
+ player1x = a
+ if collision(player1, playfield) then a = a + 4
+ return
+
+right0
+ x = x + 1
+ player0x = x
+ if collision(player0, playfield) then x = x - 3
+ return
+
+right1
+ a = a + 2
+ player1x = a
+ if collision(player1, playfield) then a = a - 4
+ return
+
+up0
+ y = y - 1
+ player0y = y
+ if collision(player0, playfield) then y = y + 3
+ return
+
+up1
+ b = b - 2
+ player1y = b
+ if collision(player1, playfield) then b = b + 4
+ return
+
+down0
+ y = y + 1
+ player0y = y
+ if collision(player0, playfield) then y = y - 3
+ return
+
+down1
+ b = b + 2
+ player1y = b
+ if collision(player1, playfield) then b = b - 4
+ return
+
