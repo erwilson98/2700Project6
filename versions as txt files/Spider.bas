@@ -1,0 +1,395 @@
+ rem   MONSTER GAME
+ rem
+ rem   Authors:
+ rem    Programmer --> Ethan Wilson
+ rem    Designer ----> Evan Brook
+ rem    Producer ----> DJ Baker
+ rem
+ rem
+ rem
+ rem
+ rem
+ rem
+ rem
+ rem
+ rem
+
+
+
+init
+
+ rem MONSTER SPRITE
+ player0:
+ %10100101
+ %10100101
+ %01011010
+ %00111100
+ %00100100
+ %01011010
+ %11000011
+end
+
+ rem HUMAN SPRITE
+ player1:
+ %01100110
+ %00100100
+ %00011000
+ %00011000
+ %01111110
+ %01001010
+ %10011010
+end
+
+ rem POSITIONS
+ rem x,y --> MONSTER COORDINATES
+ rem v,z --> HUMAN  COORDINATES
+
+ rem VARIABLES USED TO STORE DIRECTIONAL INPUTS FOR COLLISION PREVENTION
+ rem a --> left
+ rem d --> right
+ rem s --> down
+ rem w --> up
+ a = 0 : d = 0 : s = 0 : w = 0
+
+ rem GAME STATES (c)
+ rem -1 -> title screen
+ rem 0 --> game over
+ rem 1 --> set up monster level 2
+ rem 2 --> set up monster level 1
+ rem 3 --> set up middle level
+ rem 4 --> set up human level 1
+ rem 5 --> set up human level 2
+ rem 6 --> game over
+ rem 101 --> level -2 ongoing
+ rem 102 --> level -1 ongoing
+ rem 103 --> level 0 ongoing
+ rem 104 --> level 1 ongoing
+ rem 105 --> level 2 ongoing
+ rem ...
+ c = -1
+
+ rem STORES WHETHER BUTTON HAS BEEN PRESSED BY PLAYER (g)
+ rem 0 --> not pressed yet
+ rem 1 --> pressed, wall opens up
+ g = 0
+
+ rem THIS MANIPULATES BALL DIMENSIONS
+ CTRLPF = $21
+ ballheight = 4
+
+mainloop
+ rem SETS UP THE LEVEL
+ if c = 1 then gosub monsterlevel2
+ if c = 2 then gosub monsterlevel1
+ if c = 3 then gosub middlelevel
+ if c = 4 then gosub humanlevel1
+ if c = 5 then gosub humanlevel2
+
+ drawscreen
+ rem THE CHARACTERS TURNED INVISIBLE WITHOUT THIS DUPLICATE
+ if c = 101 then COLUP0 = 4 : COLUP1 = 42
+ if c = 102 then COLUP0 = 3 : COLUP1 = 41
+ if c = 103 then COLUP0 = 1 : COLUP1 = 39
+ if c = 104 then COLUP0 = 2 : COLUP1 = 40
+ if c = 105 then COLUP0 = 5 : COLUP1 = 43
+ drawscreen
+
+ rem USING GOTO MAKES THESE SHOW A STATIC SCREEN (unable to move characters)
+ if c = -1 then goto title
+ if c = 0 then goto gameover
+
+ rem POSITION UPDATE
+ player0x = x : player0y = y : player1x = v : player1y = z
+
+ rem COLORING CHARACTERS BASED on WHAT LEVEL WE'RE IN
+ if c = 101 then COLUP0 = 4 : COLUP1 = 42
+ if c = 102 then COLUP0 = 3 : COLUP1 = 41
+ if c = 103 then COLUP0 = 1 : COLUP1 = 39
+ if c = 104 then COLUP0 = 2 : COLUP1 = 40
+ if c = 105 then COLUP0 = 5 : COLUP1 = 43
+
+ rem BUTTON PRESS, OPEN WALL
+ if collision(player1, ball) then gosub buttonpress
+
+ rem HUMAN DIES, GO BACK A LEVEL
+ if collision(player0, player1) && c = 105 then c = 4
+ if collision(player0, player1) && c = 104 then c = 3
+ if collision(player0, player1) && c = 103 then c = 2
+ if collision(player0, player1) && c = 102 then c = 1
+ if collision(player0, player1) && c = 101 then c = 0
+
+
+
+ rem PREVENTS PLAYERS FROM GOING THROUGH WALLS
+ if collision(player0, playfield) then gosub collision0
+ if collision(player1, playfield) && !collision(player0,playfield) then gosub collision1
+
+ rem RESET DIRECTION INDICATORS FOR NEXTITERATION
+ a = 0 : d = 0 : s = 0 : w = 0
+
+ rem CHECK TO SEE IF PLAYER HAS BROKEN OUT OF THE MAZE
+ rem playerx = 140 --> right bound
+ rem playerx = ??? --> left bound
+ rem playery = ??? --> upper bound
+ rem playery = ??? --> lower bound
+
+ rem PLAYER BREAKS OUT OF MAZE TO NEXT LEVEL
+ if player1x > 140 && c = 101 then c = 2
+ if player1x > 140 && c = 102 then c = 3
+ if player1x > 140 && c = 103 then c = 4
+ if player1x > 140 && c = 104 then c = 5
+ if player1x > 140 && c = 105 then c = 0
+
+ rem MOVE CHARACTERS AND LOG INPUTS
+ rem MONSTER
+ if joy0left  then a = 1 : x = x - 1
+ if joy0right then d = 1 : x = x + 1
+ if joy0up    then w = 1 : y = y - 1
+ if joy0down  then s = 1 : y = y + 1
+ rem HUMAN
+ if joy1left  then a = a + 2 : v = v - 2
+ if joy1right then d = d + 2 : v = v + 2
+ if joy1up    then w = w + 2 : z = z - 2
+ if joy1down  then s = s + 2 : z = z + 2
+ rem POSITION UPDATE
+ player0x = x : player0y = y : player1x = v : player1y = z
+
+ goto mainloop
+
+
+ rem COLLISION DETECTION
+ rem OPTIONS for ADSW ARE:
+  rem 0 --> no collision
+  rem 1 --> just MONSTER collided
+  rem 2 --> just human collided
+  rem 3 --> both collided
+collision0
+ rem MONSTER COLLISION
+ if a = 1 || a = 3 then x = x + 1
+ if d = 1 || d = 3 then x = x - 1
+ if w = 1 || w = 3 then y = y + 1
+ if s = 1 || s = 3 then y = y - 1
+ player0x = x : player0y = y
+ rem CHECK IF HUMAN COLLIDED TOO
+ if collision(player1, playfield) then goto collision1
+ return
+
+collision1
+ rem FIX HUMAN (MONSTER is already fixed)
+ if a = 2 || a = 3 then v = v + 2
+ if d = 2 || d = 3 then v = v - 2
+ if w = 2 || w = 3 then z = z + 2
+ if s = 2 || s = 3 then z = z - 2
+ player1x = v : player1y = z
+ return
+ rem END OF COLLISION DETECTION
+
+buttonpress
+ g = 1
+ rem WALL to REMOVE WILL CORRESPOND to THE LEVEL WE ARE IN
+ if c = 101 then pfpixel 31 6 off
+ if c = 102 then pfpixel 31 7 off
+ if c = 103 then pfpixel 31 8 off
+ if c = 104 then pfpixel 31 9 off
+ if c = 105 then pfpixel 31 9 off
+ rem REMOVE BUTTON
+ ballx = 0 : bally = 0
+ return
+
+
+ rem GAME STATES AND THEIR UPDATES to CONSTANTS/VARIABLES
+ rem PLAYFIELD dimensions (32 x 11)
+ rem PLAYERS take up ~1 unit of the playfield
+title
+ playfield:
+  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  X..............................X
+  X..XXX..XXX..XXX.XX...XXX.XX...X
+  X.X...X.X..X..X..X.X..X...X.X..X
+  X.X.....X..X..X..X..X.X...X..X.X
+  X..XXX..X..X..X..X..X.XX..X.X..X
+  X.....X.XXX...X..X..X.X...XX...X
+  X.X...X.X.....X..X.X..X...X.X..X
+  X..XXX..X....XXX.XX...XXX.X..X.X
+  X..............................X
+  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+end
+ rem RESET EVERYTHING
+ x = 0 : y = 0 : v = 0 : z = 254
+ ballx = 0 : bally = 0
+ g = 0
+ COLUPF = rand : COLUBK = 0 : scorecolor = 0
+ rem PRESSING SPACEBAR GOES to LEVEL 1
+ if joy0fire then c = 3
+ goto mainloop
+
+monsterlevel2
+ playfield:
+  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  X...........X.............XXXX.X
+  X...........X..........XXXXXX..X
+  X...........X..........XX......X
+  X...........X..................X
+  X...........X....XXXXXXXXXXXXXXX
+  X...........X..................X
+  X.....................X........X
+  XXXXXXXXXX............X........X
+  X.....................X........X
+  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+end
+ rem UPDATE C TO IN-LEVEL STATE
+ c = 101
+ rem PLACE THE BUTTON
+ ballx = 24: bally = 77
+ rem PLACE THE CHARACTERS
+ x = 22 : y = 15
+ player0x = x : player0y = y
+ v = 133 : z = 39
+ player1x = v : player1y = z
+ rem BUTTON NOT PRESSED
+ g = 0
+ rem COLORS
+ COLUPF = 64 : COLUBK = 68 : scorecolor = 68
+ return
+
+monsterlevel1
+ playfield:
+  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  X...........X.............XXXX.X
+  X...........X..........XXXXXX..X
+  X...........X..........XX......X
+  X...........X..................X
+  X...........X....XXXXXXXXXXXXXXX
+  X...........X..................X
+  X.....................X........X
+  XXXXXXXXXX............X........X
+  X.....................X........X
+  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+end
+ rem UPDATE C TO IN-LEVEL STATE
+ c = 102
+ rem PLACE THE BUTTON
+ ballx = 24: bally = 77
+ rem PLACE THE CHARACTERS
+ x = 22 : y = 15
+ player0x = x : player0y = y
+ v = 133 : z = 39
+ player1x = v : player1y = z
+ rem BUTTON NOT PRESSED
+ g = 0
+ rem COLORS
+ COLUPF = 54 : COLUBK = 58 : scorecolor = 58
+ return
+
+middlelevel
+ playfield:
+  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  X...........X.............XXXX.X
+  X...........X..........XXXXXX..X
+  X...........X..........XX......X
+  X...........X..................X
+  X...........X....XXXXXXXXXXXXXXX
+  X...........X..................X
+  X.....................X........X
+  XXXXXXXXXX............X........X
+  X.....................X........X
+  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+end
+ rem UPDATE C TO IN-LEVEL STATE
+ c = 103
+ rem PLACE THE BUTTON
+ ballx = 24: bally = 77
+ rem PLACE THE CHARACTERS
+ x = 22 : y = 15
+ player0x = x : player0y = y
+ v = 133 : z = 39
+ player1x = v : player1y = z
+ rem BUTTON NOT PRESSED
+ g = 0
+ rem COLORS
+ COLUPF = 4 : COLUBK = 8 : scorecolor = 8
+ return
+
+humanlevel1
+ playfield:
+  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  X...........X.............XXXX.X
+  X...........X..........XXXXXX..X
+  X...........X..........XX......X
+  X...........X..................X
+  X...........X....XXXXXXXXXXXXXXX
+  X...........X..................X
+  X.....................X........X
+  XXXXXXXXXX............X........X
+  X.....................X........X
+  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+end
+ rem UPDATE C TO IN-LEVEL STATE
+ c = 104
+ rem PLACE THE BUTTON
+ ballx = 24: bally = 77
+ rem PLACE THE CHARACTERS
+ x = 22 : y = 15
+ player0x = x : player0y = y
+ v = 133 : z = 39
+ player1x = v : player1y = z
+ rem BUTTON NOT PRESSED
+ g = 0
+ rem COLORS
+ COLUPF = 24 : COLUBK = 28 : scorecolor = 28
+ return
+
+humanlevel2
+ playfield:
+  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  X...........X.............XXXX.X
+  X...........X..........XXXXXX..X
+  X...........X..........XX......X
+  X...........X..................X
+  X...........X....XXXXXXXXXXXXXXX
+  X...........X..................X
+  X.....................X........X
+  XXXXXXXXXX............X........X
+  X.....................X........X
+  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+end
+ rem UPDATE C TO IN-LEVEL STATE
+ c = 105
+ rem PLACE THE BUTTON
+ ballx = 24: bally = 77
+ rem PLACE THE CHARACTERS
+ x = 22 : y = 15
+ player0x = x : player0y = y
+ v = 133 : z = 39
+ player1x = v : player1y = z
+ rem BUTTON NOT PRESSED
+ g = 0
+ rem COLORS
+ COLUPF = 84 : COLUBK = 88 : scorecolor = 88
+ return
+
+gameover
+ playfield:
+  ..XXXX.....X....XX....XX..XXXX..
+  .X....X...X.X...X.X..X.X..X.....
+  .X.......X...X..X.X..X.X..XXX...
+  .XX..XX..XXXXX..X..XX..X..X.....
+  ..XXX.X..X...X..X..XX..X..XXXX..
+  ................................
+  ..XXXX...X.....X..XXXXX..XXXX...
+  .X....X..X.....X..X......X...X..
+  .X....X...X...X...XXXX...XXXX..
+  .X....X...X...X...X......X..XX..
+  ..XXXX.....XXX....XXXXX..X...X..
+end
+ rem MOVE PLAYERS off SCREEN
+ player0x = 0 : player0y = 0 : player1x = 0 : player1y = 100
+ rem REMOVE THE BALL
+ ballx = 0 : bally = 200
+ rem PRESSING SPACEBAR PUTS US BACK AT THE START
+ if !joy0fire && g = 99 then c = -1
+ if joy0fire then g = 99
+ goto mainloop
+
+
+
